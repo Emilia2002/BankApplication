@@ -1,6 +1,6 @@
 package com.bankapplication.management.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 
@@ -21,7 +21,7 @@ public class Accounts {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    @JsonBackReference // Jackson wont serialize owner field again
+    @JsonIgnoreProperties({"accounts"}) // prevent infinite recursion on serialization
     private Users owner;
 
     private String currency;

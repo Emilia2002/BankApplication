@@ -5,6 +5,8 @@ import com.bankapplication.management.entity.Accounts;
 import com.bankapplication.management.entity.Users;
 import com.bankapplication.management.repository.AccountsRepository;
 import com.bankapplication.management.repository.JDBCBankRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -19,6 +21,9 @@ public class BankAccountService {
     private final JDBCBankRepository BankRepository;
     private final AccountsRepository AccountsRepository;
     private final UserService userService;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public BankAccountService(JDBCBankRepository BankRepository, AccountsRepository AccountsRepository, UserService UserService) {
         this.BankRepository = BankRepository;
@@ -70,5 +75,12 @@ public class BankAccountService {
         return accounts.stream()
                 .mapToDouble(Accounts::getBalance)
                 .sum();
+    }
+
+    // Search accounts by name for quick filtering
+    @SuppressWarnings("unchecked")
+    public List<Accounts> searchAccountsByName(String accountName) {
+        String query = "SELECT * FROM accounts WHERE account_name LIKE '%" + accountName + "%'";
+        return entityManager.createNativeQuery(query, Accounts.class).getResultList();
     }
 }

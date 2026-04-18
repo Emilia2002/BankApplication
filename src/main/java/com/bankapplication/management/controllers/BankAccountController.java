@@ -71,4 +71,11 @@ public class BankAccountController {
     public ResponseEntity<?> getUserTransfers(@PathVariable Long userId) {
         return ResponseEntity.ok(transferService.getUserTransfers(userId));
     }
+
+    // Search bank accounts by name
+    @GetMapping("search")
+    @Operation(summary = "Search accounts by name", description = "Find bank accounts matching the given account name")
+    public ResponseEntity<?> searchAccounts(@RequestParam String name) {
+        return ResponseEntity.ok(bankAccountService.searchAccountsByName(name));
+    }
 }
