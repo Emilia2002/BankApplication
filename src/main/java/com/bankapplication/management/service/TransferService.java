@@ -8,7 +8,7 @@ import com.bankapplication.management.repository.AccountsRepository;
 import com.bankapplication.management.entity.Accounts;
 import com.bankapplication.management.repository.JDBCBankRepository;
 import com.bankapplication.management.repository.TransfersRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -46,7 +46,6 @@ public class TransferService {
     }
 
     // logic for transferring the funds between user's accounts
-    @Transactional
     public void transferFunds(Long senderAccountId, String recipientAccountNumber, Double amount, String description, LocalDateTime date) {
         Accounts senderAccount = AccountsRepository.findById(senderAccountId).orElseThrow(() -> new IllegalArgumentException("Sender account not found"));
         Accounts recipientAccount = BankRepository.findByAccountNumber(recipientAccountNumber);
