@@ -34,7 +34,7 @@ public class CardsService {
 
     // Generate a random 3-digit CVV
     private String generateCVV() {
-        Random random = new Random();
+        SecureRandom random = new SecureRandom();
         int cvv = 100 + random.nextInt(900); // ensures 3 digits
         return String.valueOf(cvv);
     }

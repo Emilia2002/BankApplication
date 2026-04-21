@@ -9,6 +9,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -21,6 +22,8 @@ public class BankAccountService {
     private final JDBCBankRepository BankRepository;
     private final AccountsRepository AccountsRepository;
     private final UserService userService;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -65,6 +68,7 @@ public class BankAccountService {
         return AccountsRepository.findById(accountId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
     }
 
+    @Transactional(readOnly = true)
     public Double getTotalAmount(Long userId) {
         List<Accounts> accounts = getUserBankAccounts(userId);
         for (int i = 0; i < accounts.size(); i++) {

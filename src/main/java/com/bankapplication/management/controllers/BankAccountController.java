@@ -6,6 +6,7 @@ import com.bankapplication.management.service.BankAccountService;
 import com.bankapplication.management.service.TransferService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +29,7 @@ public class BankAccountController {
     // Create a new user bank account
     @PostMapping("create-account")
     @Operation(summary = "Create a new account", description = "Generate a account for the current user")
-    public ResponseEntity<?> createBankAccount(@RequestBody CreateBankAccRequest request) {
+    public ResponseEntity<?> createBankAccount(@RequestBody @Valid CreateBankAccRequest request) {
         bankAccountService.createBankAccount(request); // create new bank account based on the request
         return ResponseEntity.ok(
                 Map.of("message", "Bank account created successfully")
