@@ -10,7 +10,7 @@ import com.bankapplication.management.repository.JDBCBankRepository;
 import com.bankapplication.management.repository.TransfersRepository;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
-
+import java.util.regex.Pattern;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -46,7 +46,14 @@ public class TransferService {
     }
 
     // logic for transferring the funds between user's accounts
+    @Transactional
     public void transferFunds(Long senderAccountId, String recipientAccountNumber, Double amount, String description, LocalDateTime date) {
+        if (description != null && !description.isEmpty()) {
+            Pattern pattern = Pattern.compile("^([a-zA-Z0-9_]+\\s?)+$");
+            if (!pattern.matcher(description).matches()) {
+                throw new IllegalArgumentException("Invalid description format. Only letters, numbers, underscores and spaces are allowed.");
+            }
+        }
         Accounts senderAccount = AccountsRepository.findById(senderAccountId).orElseThrow(() -> new IllegalArgumentException("Sender account not found"));
         Accounts recipientAccount = BankRepository.findByAccountNumber(recipientAccountNumber);
 
@@ -94,4 +101,6 @@ public class TransferService {
     public List<Transfers> getUserTransfers(Long userId) {
         return TransfersRepository.findByOwner_Id(userId);
     }
+
+
 }
