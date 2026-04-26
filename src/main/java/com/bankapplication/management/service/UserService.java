@@ -33,9 +33,7 @@ public class UserService {
 
     public UserResponse login(LoginRequest request) {
         Users user = UserRepository.findByEmail(request.getEmail());
-        if (user == null
-                || !passwordEncoder.matches(request.getPassword(), user.getPassword())
-                && !request.getPassword().isEmpty()) {
+        if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
 

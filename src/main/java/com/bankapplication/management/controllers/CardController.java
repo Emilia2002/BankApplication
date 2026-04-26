@@ -11,7 +11,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("card")
-@CrossOrigin(origins="*")
 @Tag(name = "Card Management", description = "Operations related to debit/credit cards")
 public class CardController {
 

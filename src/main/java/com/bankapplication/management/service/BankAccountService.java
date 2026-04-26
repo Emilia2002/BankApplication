@@ -77,12 +77,4 @@ public class BankAccountService {
                 .mapToDouble(Accounts::getBalance)
                 .sum();
     }
-
-    @SuppressWarnings("unchecked")
-    public List<Accounts> searchAccountsByName(String accountName) {
-        String query = "SELECT * FROM bank.accounts WHERE account_name LIKE '%"
-                + accountName + "%'";
-        return entityManager.createNativeQuery(query, Accounts.class)
-                .getResultList();
-    }
 }

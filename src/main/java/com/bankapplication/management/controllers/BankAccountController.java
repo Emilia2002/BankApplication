@@ -14,7 +14,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("bank")
-@CrossOrigin(origins="*")
 @Tag(name = "Bank Account Management", description = "Operations related to bank accounts and transfers")
 public class BankAccountController {
 
@@ -71,11 +70,5 @@ public class BankAccountController {
     @Operation(summary = "Fetch all transfers for the current user", description = "Display all transfers associated with the logged-in user")
     public ResponseEntity<?> getUserTransfers(@PathVariable Long userId) {
         return ResponseEntity.ok(transferService.getUserTransfers(userId));
-    }
-
-    @GetMapping("search")
-    @Operation(summary = "Search accounts by name", description = "Find bank accounts matching the given account name")
-    public ResponseEntity<?> searchAccounts(@RequestParam String name) {
-        return ResponseEntity.ok(bankAccountService.searchAccountsByName(name));
     }
 }
