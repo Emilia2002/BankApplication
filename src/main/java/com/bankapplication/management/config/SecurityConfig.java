@@ -12,6 +12,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
+// do not check class
 @Configuration
 public class SecurityConfig {
 
@@ -28,7 +29,7 @@ public class SecurityConfig {
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().permitAll() // PENTRU PROIECT: Momentan lăsăm totul liber ca să testăm vulnerabilitățile. Când pui JWT, schimbi în .authenticated()
+                        .anyRequest().permitAll() // only for development, change to .authenticated() in production when JWT is implemented
                 );
 
         return http.build();
@@ -41,7 +42,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",// React local
                 "http://localhost:3001",
-                "http://localhost:5173" // Next.js local
+                "http://localhost:5173"
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
