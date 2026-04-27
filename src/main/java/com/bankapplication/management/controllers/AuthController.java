@@ -8,7 +8,7 @@ import com.bankapplication.management.service.UserService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder; // IMPORT NOU
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,7 +23,7 @@ public class AuthController {
     private JDBCUserRepository userRepository;
 
     @Autowired
-    private PasswordEncoder passwordEncoder; // IMPORTĂM ENCODER-UL
+    private PasswordEncoder passwordEncoder;
 
     @PostMapping("register")
     public ResponseEntity<?> registerUser(@RequestBody Users newUser) {

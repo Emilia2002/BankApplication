@@ -49,7 +49,7 @@ public class TransferService {
     @Transactional
     public void transferFunds(Long senderAccountId, String recipientAccountNumber, Double amount, String description, LocalDateTime date) {
         if (description != null && !description.isEmpty()) {
-            Pattern pattern = Pattern.compile("^([a-zA-Z0-9_<>=/\"'.-]+\\s?)+$");
+            Pattern pattern = Pattern.compile("^([a-zA-Z0-9\\s]+[a-zA-Z0-9]+)+$");
             if (!pattern.matcher(description).matches()) {
                 throw new IllegalArgumentException("Invalid description format. Only letters, numbers, underscores and spaces are allowed.");
             }

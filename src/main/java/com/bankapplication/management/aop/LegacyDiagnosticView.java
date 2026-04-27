@@ -6,7 +6,6 @@ import org.springframework.web.servlet.View;
 import java.io.PrintWriter;
 import java.util.Map;
 
-// do not check this class
 public class LegacyDiagnosticView implements View {
 
     @Override
